@@ -1,4 +1,4 @@
-name: Deploy React App
+name: Deploy to EC2
 
 on:
   push:
@@ -13,19 +13,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          node-version: 18
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ec2-user/ci_cd_demo
 
-      - name: Install Dependencies
-        run: npm install
+            git pull origin master
 
-      - name: Build Project
-        run: npm run build
+            docker stop react-app || true
+            docker rm react-app || true
 
-      - name: Build Docker Image
-        run: docker build -t react-app .
+            docker build -t react-app .
 
-      - name: Deployment Success
-        run: echo "Application deployed successfully"
+            docker run -d \
+              --name react-app \
+              -p 3000:3000 \
+              react-app
